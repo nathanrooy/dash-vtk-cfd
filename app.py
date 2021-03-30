@@ -143,8 +143,9 @@ controls = [
 
 app.layout = dbc.Container(
     fluid=True,
-    style={"margin-top": "15px", "height": "calc(100vh - 30px)"},
     children=[
+        html.H2("Vehicle Geometry with OpenFOAM"),
+        html.Hr(),
         dbc.Row(
             [
                 dbc.Col(width=4, children=controls),
@@ -155,7 +156,7 @@ app.layout = dbc.Container(
                     ],
                 ),
             ],
-            style={"height": "100%"},
+            style={"margin-top": "15px", "height": "calc(100vh - 230px)"},
         ),
     ],
 )
