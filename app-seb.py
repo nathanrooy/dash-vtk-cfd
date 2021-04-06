@@ -21,11 +21,11 @@ DATA_PATH = "data"
 # -----------------------------------------------------------------------------
 
 
-def _load_vtp(filepath, fieldname=None):
+def _load_vtp(filepath, fieldname=None, point_arrays=[], cell_arrays=[]):
     reader = vtk.vtkXMLPolyDataReader()
     reader.SetFileName(filepath)
     reader.Update()
-    return to_mesh_state(reader.GetOutput(), fieldname)
+    return to_mesh_state(reader.GetOutput(), fieldname, point_arrays, cell_arrays)
 
 # -----------------------------------------------------------------------------
 # GUI setup
@@ -41,7 +41,7 @@ server = app.server
 # vehicle geometry
 vehicle_vtk = []
 for filename in glob.glob(os.path.join(DATA_PATH, "vehicle") + "/*.vtp"):
-    mesh = _load_vtp(filename, 'U')
+    mesh = _load_vtp(filename, point_arrays=['U', 'p'])
     part_name = filename.split("/")[-1].replace(".vtp", "")
     child = dash_vtk.GeometryRepresentation(
         id=f"{part_name}-rep",
@@ -110,6 +110,7 @@ controls = [
                         options=[
                             {"label": "solid", "value": "solid"},
                             {"label": "U", "value": "U"},
+                            {"label": "p", "value": "p"},
                         ],
                         value="solid",
                     ),
@@ -163,11 +164,17 @@ app.layout = dbc.Container(
 # Handle controls
 # -----------------------------------------------------------------------------
 
+COLOR_RANGES = {
+    'solid': [0, 1],
+    'U': [0, 100],
+    'p': [-4464, 1700],
+}
 
 @app.callback(
     [Output("vtk-view", "triggerRender")]
     + [Output(item.id, "mapper") for item in vehicle_vtk]
     + [Output(item.id, "actor") for item in vehicle_vtk]
+    + [Output(item.id, "colorDataRange") for item in vehicle_vtk]
     + [Output("cp-rep", "actor")],
     [
         Input("geometry", "value"),
@@ -201,7 +208,7 @@ def update_scene(geometry, isosurfaces, surfcolor):
 
     # update surface coloring
     if triggered and "surfcolor" in triggered[0]["prop_id"]:
-        surf_state = []
+        color_range = COLOR_RANGES[triggered[0]["value"]]
         mapper = {
             'colorByArrayName': triggered[0]["value"],
             'scalarMode': 3,
@@ -212,10 +219,12 @@ def update_scene(geometry, isosurfaces, surfcolor):
             mapper = { 'scalarVisibility': False }
 
         surf_state = [mapper for item in vehicle_vtk]
+        color_ranges = [color_range for item in vehicle_vtk]
     else:
         surf_state = [dash.no_update for item in vehicle_vtk]
+        color_ranges = [dash.no_update for item in vehicle_vtk]
 
-    return [random.random()] + surf_state + geo_viz + [iso_viz]
+    return [random.random()] + surf_state + geo_viz + color_ranges + [iso_viz]
 
 
 # -----------------------------------------------------------------------------
